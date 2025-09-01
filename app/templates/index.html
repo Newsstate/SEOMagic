@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SEO Insight / Python</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --muted:#6b7280; --ink:#0f172a; --ok:#16a34a; --warn:#ca8a04; --bad:#dc2626;
+  --line:#e5e7eb; --pill:#eef2ff; --pill-ink:#1f2937;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg); color:var(--ink); font-family:Inter,system-ui,Segoe UI,Roboto,Arial; margin:0}
+.wrap{max-width:1160px; margin:0 auto; padding:28px 18px}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px}
+.topbar h1{font-size:22px; margin:0}
+.nav a{color:var(--muted); text-decoration:none; margin-left:16px; font-size:14px}
+.inputbar{display:flex; gap:10px; flex-wrap:wrap; margin:10px 0 12px}
+.inputbar input{flex:1; min-width:320px; padding:12px 14px; border:1px solid var(--line); background:#fff; border-radius:10px}
+.btn{padding:12px 16px; border:0; border-radius:10px; background:#111827; color:#fff; cursor:pointer}
+.btn.ghost{background:#eef2ff; color:#111827}
+.btn.small{padding:8px 12px; font-size:13px}
+
+.kpis{display:grid; grid-template-columns: repeat(4, minmax(160px,1fr)); gap:12px; margin-bottom:10px}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px}
+.kpi .t{font-size:12px; color:var(--muted); margin-bottom:6px}
+.kpi .v{font-size:18px; font-weight:600}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0}
+.linkbtn{display:inline-block; text-decoration:none; }
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:14px}
+.card h3{margin:0 0 10px; font-size:16px}
+.krow{display:grid; grid-template-columns: 1fr; gap:8px}
+.kv{display:grid; grid-template-columns: 160px 1fr; gap:12px; padding:6px 0; border-bottom:1px dashed var(--line)}
+.kv:last-child{border:0}
+.kv .k{color:var(--muted)}
+.pills{display:flex; gap:6px; flex-wrap:wrap}
+.chip{background:var(--pill); color:var(--pill-ink); padding:4px 8px; border-radius:999px; font-size:12px}
+
+.cols{display:grid; grid-template-columns: 1fr 1fr; gap:16px}
+@media (max-width:1000px){ .kpis{grid-template-columns:1fr 1fr}; .cols{grid-template-columns:1fr} }
+
+.table{width:100%; border-collapse:collapse}
+.table th,.table td{padding:8px 10px; border-bottom:1px solid var(--line); font-size:14px; text-align:left}
+.table th{color:var(--muted); font-weight:600; background:#fafafa}
+
+.acc{margin-top:10px}
+.acc details{background:var(--card); border:1px solid var(--line); border-radius:10px; margin-top:8px}
+.acc summary{list-style:none; cursor:pointer; padding:12px 14px; font-weight:600}
+.acc summary::-webkit-details-marker{display:none}
+.acc .pane{padding:14px}
+
+.code{background:#0b1020; color:#dbeafe; padding:12px; border-radius:8px; overflow:auto; font-family: ui-monospace, Menlo, Consolas, monospace; font-size:12px}
+.small{color:var(--muted); font-size:12px}
+.right{margin-left:auto}
+.ellipsis{max-width:520px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+/* Color scoring chips */
+.score{
+  display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px;
+  background:#eef2ff; color:#1f2937; border:1px solid rgba(0,0,0,0.04)
+}
+.score.ok   { background:#ecfdf5; color:#065f46; border-color:#bbf7d0 }
+.score.warn { background:#fffbeb; color:#92400e; border-color:#fde68a }
+.score.bad  { background:#fef2f2; color:#b91c1c; border-color:#fecaca }
+.score.neutral { background:#eef2ff; color:#1f2937; }
+
+/* mini-accordion inside Links */
+.subacc{border:1px solid var(--line); border-radius:10px; background:var(--card); margin-top:10px}
+.subacc summary{list-style:none; cursor:pointer; padding:10px 12px; font-weight:600; display:flex; align-items:center; gap:8px}
+.subacc summary::-webkit-details-marker{display:none}
+.subacc summary .count{font-weight:400; color:var(--muted)}
+.subacc summary::before{
+  content:"▸"; font-size:12px; line-height:1; transform:translateY(1px); transition:transform .15s ease;
+}
+.subacc[open] summary::before{ content:"▾"; }
+.subacc .pane{padding:12px 14px; border-top:1px dashed var(--line)}
+
+
+/* Top step progress (sticky) */
+.progress-steps{
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg); padding: 8px 0; margin: 6px 0 12px;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.step{display:flex; align-items:center; gap:6px; padding:6px 10px;
+  border-radius:999px; border:1px solid var(--line); background:#fff;
+  font-size:12px; color:var(--muted);}
+.step .dot{width:8px; height:8px; border-radius:999px; background:#d1d5db}
+.step.active{border-color:#c7d2fe; background:#eef2ff; color:#1f2937}
+.step.active .dot{background:#6366f1}
+.step.done{border-color:#bbf7d0; background:#ecfdf5; color:#065f46}
+.step.done .dot{background:#22c55e}
+.step.fail{border-color:#fecaca; background:#fef2f2; color:#b91c1c}
+.step.fail .dot{background:#ef4444}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <h1>SEO & Performance Dashboard</h1>
+    <div class="nav">
+      <a href="#" id="home-link">Home</a>
+      <a href="#" id="scheduled-link">Scheduled Scans</a>
+      <a href="#" id="export-csv">Export CSV</a>
+    </div>
+  </div>
+
+  <div class="inputbar">
+    <input id="url" placeholder="Enter URL (https://…)" />
+    <button class="btn ghost" id="amp-diff" title="Compare AMP vs Non-AMP" disabled>AMP vs Non-AMP</button>
+    <button class="btn ghost" id="quick">Quick (7s)</button>
+    <button class="btn" id="scan">Analyze</button>
+  </div>
+
+  <!-- Top step progress -->
+  <div id="scan-steps" class="progress-steps" hidden>
+    <div class="step" data-step="fetch"><span class="dot"></span>Fetch</div>
+    <div class="step" data-step="speed"><span class="dot"></span>Speed</div>
+    <div class="step" data-step="network"><span class="dot"></span>Network</div>
+    <div class="step" data-step="overview"><span class="dot"></span>Overview</div>
+    <div class="step" data-step="meta"><span class="dot"></span>Meta</div>
+    <div class="step" data-step="content"><span class="dot"></span>Content</div>
+    <div class="step" data-step="links"><span class="dot"></span>Links</div>
+    <div class="step" data-step="media"><span class="dot"></span>Media</div>
+    <div class="step" data-step="indexing"><span class="dot"></span>Indexing</div>
+    <div class="step" data-step="security"><span class="dot"></span>Security</div>
+    <div class="step" data-step="mixed"><span class="dot"></span>Mixed</div>
+    <div class="step" data-step="schema"><span class="dot"></span>Schema</div>
+    <div class="step" data-step="finish"><span class="dot"></span>Done</div>
+  </div>
+
+  <div id="kpi-wrap" class="kpis" style="display:none">
+    <div class="kpi"><div class="t">Status</div><div class="v"><span id="kpi-status" class="score">—</span></div></div>
+    <div class="kpi"><div class="t">Load Time</div><div class="v"><span id="kpi-load" class="score">—</span></div></div>
+    <div class="kpi"><div class="t">Page Size</div><div class="v"><span id="kpi-size" class="score">—</span></div></div>
+    <div class="kpi"><div class="t">Protocol</div><div class="v"><span id="kpi-proto" class="score">—</span></div></div>
+  </div>
+
+  <div class="actions" id="act-wrap" style="display:none">
+    <a class="btn linkbtn" id="open-page" target="_blank">Open Page</a>
+    <button class="btn ghost" id="download-pdf">Download as PDF</button>
+    <button class="btn ghost right" id="download-json">Download JSON</button>
+  </div>
+
+  <!-- Speed (Lab proxies) -->
+  <div class="card" id="speed-card" style="display:none">
+    <h3>Speed</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">FCP</div><div><span id="sp-fcp" class="score">—</span></div></div>
+      <div class="kv"><div class="k">LCP</div><div><span id="sp-lcp" class="score">—</span></div></div>
+      <div class="kv"><div class="k">CLS</div><div><span id="sp-cls" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Input (FID/INP)</div><div><span id="sp-fid" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Long Tasks (total)</div><div><span id="sp-long" class="score">—</span></div></div>
+    </div>
+  </div>
+
+  <!-- Network -->
+  <div class="card" id="network-card" style="display:none">
+    <h3>Network</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">Requests</div><div><span id="nw-req" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Transfer</div><div><span id="nw-bytes" class="score">—</span></div></div>
+    </div>
+    <h4 class="small" style="margin-top:10px">By Type</h4>
+    <table class="table" id="nw-type"><thead><tr><th>Type</th><th>Requests</th><th>Bytes</th></tr></thead><tbody></tbody></table>
+    <h4 class="small" style="margin-top:10px">Largest Files (Top 10)</h4>
+    <table class="table" id="nw-big"><thead><tr><th>Name</th><th>Type</th><th>Bytes</th></tr></thead><tbody></tbody></table>
+    <h4 class="small" style="margin-top:10px">Third-party Domains (Top 10)</h4>
+    <table class="table" id="nw-3p"><thead><tr><th>Domain</th><th>Requests</th><th>Bytes</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card" id="page-overview" style="display:none">
+    <h3>Page Overview</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">URL</div><div id="ov-url"></div></div>
+      <div class="kv"><div class="k">Final</div><div id="ov-final"></div></div>
+      <div class="kv"><div class="k">HTTPS</div><div><span id="ov-https" class="score">—</span></div></div>
+      <div class="kv"><div class="k">HTTP Version</div><div id="ov-httpver"></div></div>
+      <div class="kv"><div class="k">AMP</div><div id="ov-amp"></div></div>
+    </div>
+  </div>
+
+  <div class="card" id="seo-meta" style="display:none">
+    <h3>SEO Meta</h3>
+    <div class="cols">
+      <div>
+        <div class="krow">
+          <div class="kv"><div class="k">Title</div><div><span id="m-title" class="score neutral">—</span> <span id="m-title-note" class="small"></span></div></div>
+          <div class="kv"><div class="k">Meta Description</div><div><span id="m-desc" class="score neutral">—</span> <span id="m-desc-note" class="small"></span></div></div>
+          <div class="kv"><div class="k">Canonical</div><div><span id="m-canon" class="score neutral">—</span></div></div>
+          <div class="kv"><div class="k">Robots</div><div><span id="m-robots" class="score neutral">—</span></div></div>
+          <div class="kv"><div class="k">Viewport</div><div id="m-viewport"></div></div>
+          <div class="kv"><div class="k">Favicon</div><div id="m-favicon"></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="krow">
+          <div class="kv"><div class="k">OG Tags</div><div id="m-og" class="pills"></div></div>
+          <div class="kv"><div class="k">Twitter Card</div><div id="m-twitter" class="pills"></div></div>
+          <div class="kv"><div class="k">Hreflang</div><div id="m-hreflang" class="pills"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="content-structure" style="display:none">
+    <h3>Content Structure</h3>
+    <div class="cols">
+      <div>
+        <h4 class="small">Headings (H1–H6)</h4>
+        <div id="headings" class="krow"></div>
+      </div>
+      <div>
+        <h4 class="small">Keyword Density (top 10)</h4>
+        <table class="table" id="kw-table"><thead><tr><th>Word</th><th>Count</th><th>%</th></tr></thead><tbody></tbody></table>
+        <div class="krow" style="margin-top:10px">
+          <div class="kv"><div class="k">Word Count</div><div><span id="ct-words" class="score">—</span></div></div>
+          <div class="kv"><div class="k">Reading Time</div><div><span id="ct-read" class="score">—</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="amp-compare" style="display:none">
+    <h3>AMP vs Non-AMP</h3>
+    <table class="table" id="amp-tbl">
+      <thead>
+        <tr><th>Metric</th><th>Non-AMP</th><th>AMP</th><th>Δ</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <!-- Indexing & Security roll-up -->
+  <div class="cols" id="idx-sec" style="display:none; gap:12px; margin-top:12px">
+    <div class="card">
+      <h3>Indexing</h3>
+      <div class="krow">
+        <div class="kv"><div class="k">X-Robots-Tag</div><div><span id="ix-xrobots" class="score neutral">—</span></div></div>
+        <div class="kv"><div class="k">Canonical Valid</div><div><span id="ix-canok" class="score">—</span></div></div>
+        <div class="kv"><div class="k">Title Length</div><div><span id="ix-tlen" class="score">—</span></div></div>
+        <div class="kv"><div class="k">Meta Description Length</div><div><span id="ix-dlen" class="score">—</span></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Security Headers</h3>
+      <div class="krow">
+        <div class="kv"><div class="k">HSTS</div><div><span id="sec-hsts" class="score">—</span></div></div>
+        <div class="kv"><div class="k">CSP</div><div><span id="sec-csp" class="score">—</span></div></div>
+        <div class="kv"><div class="k">X-Frame-Options</div><div><span id="sec-xfo" class="score neutral">—</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cards layout: Links, Media, Structured Data, Indexing, Performance, Mixed, Raw -->
+<div class="cards">
+
+  <!-- Links (Card) -->
+  <div class="card" id="links-card" style="display:block">
+    <h3>Links</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">Internal</div><div><span id="ln-int" class="score">—</span></div></div>
+      <div class="kv"><div class="k">External</div><div><span id="ln-ext" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Nofollow</div><div><span id="ln-nf" class="score neutral">—</span></div></div>
+    </div>
+
+    <details class="subacc" id="ln-int-acc">
+      <summary>Internal Links <span class="count" id="ln-int-count">(0)</span></summary>
+      <div class="pane">
+        <div class="small" id="ln-int-meta" style="margin-bottom:6px"></div>
+        <table class="table" id="ln-int-table">
+          <thead><tr><th>URL</th><th>Text</th><th>rel</th><th>Status</th></tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="subacc" id="ln-ext-acc">
+      <summary>External Links <span class="count" id="ln-ext-count">(0)</span></summary>
+      <div class="pane">
+        <div class="small" id="ln-ext-meta" style="margin-bottom:6px"></div>
+        <table class="table" id="ln-ext-table">
+          <thead><tr><th>URL</th><th>Text</th><th>rel</th><th>Status</th></tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </details>
+
+    <details class="subacc" id="ln-nf-acc">
+      <summary>Nofollow Links <span class="count" id="ln-nf-count">(0)</span></summary>
+      <div class="pane">
+        <div class="small" id="ln-nf-meta" style="margin-bottom:6px"></div>
+        <table class="table" id="ln-nf-table">
+          <thead><tr><th>URL</th><th>Text</th><th>rel</th><th>Status</th></tr></thead><tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- Media (Card) -->
+  <div class="card" id="media-card" style="display:block">
+    <h3>Media (Images)</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">Total Images</div><div><span id="img-total" class="score neutral">—</span></div></div>
+      <div class="kv"><div class="k">Missing alt</div><div><span id="img-miss" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Missing dimensions</div><div><span id="img-dims" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Lazy-loading ratio</div><div><span id="img-lazy" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Sample</div><div id="img-sample" class="krow"></div></div>
+    </div>
+
+    <h4 class="small" style="margin-top:10px">Heavy images (&gt;100KB)</h4>
+    <table class="table" id="img-heavy">
+      <thead><tr><th>URL</th><th>Bytes</th></tr></thead><tbody></tbody>
+    </table>
+    <div class="small" id="img-lazy-candidates" style="margin-top:8px"></div>
+  </div>
+
+  <!-- Structured Data (Card) -->
+  <div class="card" id="sd-card" style="display:block">
+    <h3>Structured Data</h3>
+    <div id="sd-types" class="pills"></div>
+  </div>
+
+
+
+  <!-- Indexing & Crawling (Card) -->
+  <div class="card" id="ix-card" style="display:block">
+    <h3>Indexing &amp; Crawling</h3>
+<!-- Sitemaps (from robots.txt) -->
+<details class="subacc" id="sm-acc" style="margin-top:10px">
+  <summary>sitemaps</summary>
+  <div class="pane">
+
+    <div class="krow">
+      <div class="kv">
+        <div class="k">Found in robots.txt</div>
+        <div id="sm-list" class="small" style="max-width:100%; word-break:break-all">—</div>
+      </div>
+    </div>
+
+    <h4 class="small" style="margin:10px 0 6px">URL scanned</h4>
+    <table class="table" id="sm-scanned">
+      <thead>
+        <tr>
+          <th>Sitemap URL</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>URLs</th>
+          <th>Contains current URL</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+  </div>
+</details>
+    <div class="krow">
+ 
+    <details class="subacc" id="rb-acc" style="margin-top:10px">
+      <summary>robots.txt</summary>
+      <div class="pane">
+        <div class="krow">
+          <div class="kv"><div class="k">URL</div><div id="rb-url" class="ellipsis">—</div></div>
+          <div class="kv"><div class="k">Status</div><div><span id="rb-status" class="score neutral">—</span></div></div>
+          <div class="kv"><div class="k">User-agent</div><div id="rb-ua">—</div></div>
+          <div class="kv"><div class="k">Current URL Allowed?</div><div><span id="rb-can" class="score neutral">—</span></div></div>
+        </div>
+
+
+        <div class="krow" style="margin-top:10px">
+          <div class="kv"><div class="k">Test user-agent</div>
+            <div>
+              <select id="rb-ua-select" style="padding:6px 8px; border:1px solid var(--line); border-radius:8px">
+                <option value="*">*</option>
+                <option>Googlebot</option>
+                <option>Bingbot</option>
+                <option>Googlebot-Image</option>
+                <option>DuckDuckBot</option>
+                <option>Applebot</option>
+                <option>Yandex</option>
+                <option>AhrefsBot</option>
+                <option>SemrushBot</option>
+              </select>
+              <input id="rb-ua-custom" placeholder="or custom UA..." style="margin-left:6px; padding:6px 8px; border:1px solid var(--line); border-radius:8px; min-width:220px">
+            </div>
+          </div>
+          <div class="kv"><div class="k">Test path</div>
+            <div><input id="rb-path" placeholder="/path" style="padding:6px 8px; border:1px solid var(--line); border-radius:8px; min-width:260px"></div>
+          </div>
+          <div class="kv"><div class="k">Test Result</div><div><span id="rb-test" class="score neutral">—</span></div></div>
+        </div>
+
+        <div class="cols" style="margin-top:10px">
+          <div>
+            <h4 class="small">Allow rules</h4>
+            <table class="table" id="rb-allow-table">
+              <thead><tr><th>Path / Pattern</th></tr></thead><tbody></tbody>
+            </table>
+          </div>
+          <div>
+            <h4 class="small">Disallow rules</h4>
+            <table class="table" id="rb-disallow-table">
+              <thead><tr><th>Path / Pattern</th></tr></thead><tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </details>
+    <div id="ix-canon"></div></div>
+      <div class="kv"><div class="k">Robots</div><div id="ix-robots"></div></div>
+      <div class="kv"><div class="k">Hreflang Count</div><div id="ix-hreflang"></div></div>
+    </div>
+  </div>
+
+  <!-- Performance (Card) -->
+  <div class="card" id="perf-card" style="display:block">
+    <h3>Performance</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">DOM Interactive</div><div><span id="perf-di" class="score">—</span></div></div>
+      <div class="kv"><div class="k">DOM Complete</div><div><span id="perf-dc" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Scripts</div><div><span id="res-scripts" class="score neutral">—</span></div></div>
+      <div class="kv"><div class="k">Stylesheets</div><div><span id="res-css" class="score neutral">—</span></div></div>
+    </div>
+    <div class="krow" style="margin-top:10px">
+      <div class="kv"><div class="k">Total JS size</div><div><span id="px-js" class="score neutral">—</span></div></div>
+      <div class="kv"><div class="k">Total CSS size</div><div><span id="px-css" class="score neutral">—</span></div></div>
+      <div class="kv"><div class="k">Unused CSS (rough)</div><div><span id="px-unused" class="score neutral">—</span></div></div>
+    </div>
+    <h4 class="small" style="margin-top:10px">Render-blocking (best-effort)</h4>
+    <table class="table" id="px-block"><thead><tr><th>Type</th><th>URL</th></tr></thead><tbody></tbody></table>
+  </div>
+
+  <!-- Mixed Content (Card) -->
+  <div class="card" id="mixed-card" style="display:block">
+    <h3>Mixed Content (HTTPS)</h3>
+    <div class="krow">
+      <div class="kv"><div class="k">Insecure refs</div><div><span id="mx-count" class="score">—</span></div></div>
+      <div class="kv"><div class="k">Sample</div><div id="mx-sample" class="krow"></div></div>
+    </div>
+  </div>
+
+
+
+
+
+
+<script>
+const $ = (id)=>document.getElementById(id);
+window.__lastScan = null; // last Non-AMP scan
+
+/* ---------- Helpers ---------- */
+function bytes(n){ if(n==null) return "—"; const s=['B','KB','MB']; let i=0; while(n>=1024 && i<s.length-1){ n/=1024; i++; } return (Math.round(n*10)/10)+' '+s[i]; }
+function ms(n){ return (n==null)?'—':(Math.round(n)+' ms'); }
+function pct(n){ return (n==null)?'—':((n*100).toFixed(1)+'%'); }
+function setScore(id, text, grade='neutral'){ const el=$(id); el.textContent=text; el.className='score '+(grade||'neutral'); }
+const num = (v)=> (v==null ? '—' : String(v));
+
+function gradeStatus(code){ if(code==null) return 'neutral'; if(code>=300 && code<400) return 'warn'; if(code>=400) return 'bad'; return 'ok'; }
+function gradeProtocol(p){ return (p==='HTTPS') ? 'ok' : 'bad'; }
+function gradeSize(b){ if(b==null) return 'neutral'; if(b<=2*1024*1024) return 'ok'; if(b<=4*1024*1024) return 'warn'; return 'bad'; }
+function gradeRequests(n){ if(n==null) return 'neutral'; if(n<=50) return 'ok'; if(n<=100) return 'warn'; return 'bad'; }
+function gradeFCP(v){ if(v==null) return 'neutral'; if(v<=1800) return 'ok'; if(v<=3000) return 'warn'; return 'bad'; }
+function gradeLCP(v){ if(v==null) return 'neutral'; if(v<=2500) return 'ok'; if(v<=4000) return 'warn'; return 'bad'; }
+function gradeCLS(v){ if(v==null) return 'neutral'; if(v<=0.1) return 'ok'; if(v<=0.25) return 'warn'; return 'bad'; }
+function gradeFID(v){ if(v==null) return 'neutral'; if(v<=100) return 'ok'; if(v<=300) return 'warn'; return 'bad'; }
+function gradeLong(v){ if(v==null) return 'neutral'; if(v<=200) return 'ok'; if(v<=600) return 'warn'; return 'bad'; }
+function gradeMixed(n){ if(n==null) return 'neutral'; return n===0 ? 'ok' : 'bad'; }
+function gradeHSTS(v, proto){ if(proto==='HTTPS'){ return v ? 'ok' : 'warn'; } return 'neutral'; }
+function gradeCSP(v){ return v ? 'ok' : 'warn'; }
+function gradeCanonicalValid(v){ if(v===true) return 'ok'; if(v===false) return 'bad'; return 'warn'; }
+function gradeTitleLen(n){ if(n==null) return 'neutral'; if(n<10||n>80) return 'bad'; if(n<30||n>65) return 'warn'; return 'ok'; }
+function gradeDescLen(n){ if(n==null) return 'neutral'; if(n<30||n>300) return 'bad'; if(n<70||n>160) return 'warn'; return 'ok'; }
+function gradeImageMissingRatio(missing,count){ if(!count) return 'neutral'; const r=missing/count; if(r<=0.1) return 'ok'; if(r<=0.3) return 'warn'; return 'bad'; }
+function gradeLazyRatio(r){ if(r==null) return 'neutral'; if(r>=0.6) return 'ok'; if(r>=0.3) return 'warn'; return 'bad'; }
+function gradeMs(ms){
+  if (ms == null) return "neutral";
+  if (ms <= 2000) return "ok";      // good <= 2s
+  if (ms <= 4000) return "warn";    // 2–4s meh
+  return "bad";                     // > 4s slow
+}
+function formatMs(ms){
+  if (ms == null) return "—";
+  return `${Math.round(ms)} ms`;
+}
+
+// DOM chip & score chip
+function pill(text){ const span=document.createElement('span'); span.className='chip'; span.textContent=text; return span; }
+const scoreChip = (val, cls='neutral') => `<span class="score ${cls}">${val}</span>`;
+
+
+
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  function renderPerformance(data){
+    const perf = data?.perf || {};
+    const rb   = (data?.perf_extra?.render_blocking) || {scripts:[], stylesheets:[]};
+
+    // DOM Interactive / DOM Complete
+    if ($('perf-di')){
+      const v = perf.domInteractive ?? null;
+      $('perf-di').textContent = formatMs(v);
+      $('perf-di').className   = 'score ' + gradeMs(v);
+    }
+    if ($('perf-dc')){
+      const v = perf.domComplete ?? null;
+      $('perf-dc').textContent = formatMs(v);
+      $('perf-dc').className   = 'score ' + gradeMs(v);
+    }
+
+    // Counts of render-blocking resources (as discovered by Playwright)
+    if ($('res-scripts')){
+      const n = (rb.scripts || []).length;
+      $('res-scripts').textContent = String(n);
+      $('res-scripts').className   = 'score ' + (n > 0 ? 'warn' : 'ok');
+    }
+    if ($('res-css')){
+      const n = (rb.stylesheets || []).length;
+      $('res-css').textContent = String(n);
+      $('res-css').className   = 'score ' + (n > 0 ? 'warn' : 'ok');
+    }
+  }
+
+  // hook into the global render
+  const prev = window.render;
+  window.render = function (data){
+    try{ if (typeof prev === 'function') prev(data); }catch(e){}
+    try{ renderPerformance(data); }catch(e){ console.warn('perf render failed', e); }
+  };
+})();
+
+
+/* ---------- Link rel badges & status ---------- */
+function relBadges(relStr){
+  const out=[];
+  const r=(relStr||'').toLowerCase();
+  if(r.includes('nofollow')) out.push(scoreChip('nofollow','warn'));
+  if(r.includes('noopener')) out.push(scoreChip('noopener','neutral'));
+  if(r.includes('noreferrer')) out.push(scoreChip('noreferrer','neutral'));
+  if(r.includes('sponsored')) out.push(scoreChip('sponsored','neutral'));
+  if(r.includes('ugc')) out.push(scoreChip('ugc','neutral'));
+  return out.join(' ');
+}
+function statusChipFromCode(code){
+  if(code===0) return scoreChip('opaque','neutral'); // CORS-opaque
+  if(code>=200 && code<400) return scoreChip(String(code),'ok');
+  if(code>=400 && code<600) return scoreChip(String(code),'bad');
+  return scoreChip(String(code||'—'),'neutral');
+}
+
+// Throttled checker
+const _q=[]; let _active=0; const MAX_ACTIVE=4;
+function queueCheck(td, url){
+  _q.push({td,url});
+  pump();
+}
+async function pump(){
+  if(_active>=MAX_ACTIVE || !_q.length) return;
+  const {td,url}=_q.shift(); _active++;
+  try{
+    // Try HEAD, fall back to GET; CORS may make this opaque.
+    let r;
+    try{
+      r = await fetch(url, {method:'HEAD', mode:'cors', redirect:'follow', cache:'no-cache'});
+      if(r.type==='opaque') throw new Error('opaque');
+      td.innerHTML = statusChipFromCode(r.status);
+    }catch(_){
+      try{
+        r = await fetch(url, {method:'GET', mode:'cors', redirect:'follow', cache:'no-cache'});
+        if(r.type==='opaque') td.innerHTML = statusChipFromCode(0);
+        else td.innerHTML = statusChipFromCode(r.status);
+      }catch(e){
+        td.innerHTML = scoreChip('ERR','bad');
+      }
+    }
+  } finally {
+    _active--; pump();
+  }
+}
+
+function fillLinkTable(tableId, rows){
+  const tb = document.querySelector(`#${tableId} tbody`);
+  if (!tb) return;
+  tb.innerHTML = '';
+  (rows || []).slice(0, 200).forEach(r => { // cap to 200 checks
+    const tr = document.createElement('tr');
+    const href = r.href || '';
+    const text = (r.text || '').replace(/\s+/g,' ').trim();
+    tr.innerHTML = `
+      <td class="ellipsis"><a href="${href}" target="_blank" rel="noopener">${href}</a></td>
+      <td class="ellipsis" title="${text}">${text || '—'}</td>
+      <td>${relBadges(r.rel || '')}</td>
+      <td class="ln-status">${scoreChip('…','neutral')}</td>`;
+    tb.appendChild(tr);
+    // Queue async status check
+    const tdStatus = tr.querySelector('.ln-status');
+    if(href && /^https?:/i.test(href)) queueCheck(tdStatus, href);
+    else tdStatus.innerHTML = scoreChip('—','neutral');
+  });
+}
+
+/* ---------- Step progress helpers ---------- */
+function progressInit(){
+  const bar = document.getElementById('scan-steps');
+  bar.hidden = false;
+  [...bar.querySelectorAll('.step')].forEach(s=>s.classList.remove('active','done','fail'));
+  setStepState('fetch','active');
+}
+function setStepState(name, state){
+  const el = document.querySelector(`.step[data-step="${name}"]`);
+  if(!el) return;
+  el.classList.remove('active','done','fail');
+  if(state) el.classList.add(state);
+  if(state==='done'){
+    const all = [...document.querySelectorAll('#scan-steps .step')];
+    const idx = all.indexOf(el);
+    const next = all[idx+1];
+    if(next) next.classList.add('active');
+  }
+}
+function stepDone(name){ setStepState(name,'done'); }
+function stepActive(name){ setStepState(name,'active'); }
+function stepFail(name){ setStepState(name,'fail'); }
+
+/* ---------- Scan ---------- */
+async function runScan(opts={rendered:true, waitMs:null}) {
+  const url = $('url').value.trim();
+  if (!url) return;
+
+  progressInit(); // show top steps
+
+  try{
+    const fd = new FormData();
+    fd.append('url', url);
+    fd.append('mobile', false);
+    fd.append('rendered', opts.rendered ? 'true' : 'false');
+    if (opts.waitMs != null) fd.append('max_wait_ms', String(opts.waitMs));
+
+    stepActive('fetch');
+    const r = await fetch('/api/analyze', { method:'POST', body: fd });
+    const data = await r.json();
+
+    stepDone('fetch'); // response received
+    render(data);      // render will advance remaining steps
+  } catch (e){
+    console.error(e);
+    stepFail('fetch');
+    alert('Scan failed. Please try again.');
+  }
+}
+
+/* ---------- AMP compare helpers ---------- */
+async function scanRaw(url, waitMs=null){
+  const fd = new FormData();
+  fd.append('url', url);
+  fd.append('mobile', false);
+  fd.append('rendered', 'true');
+  if (waitMs != null) fd.append('max_wait_ms', String(waitMs));
+  const r = await fetch('/api/analyze', { method:'POST', body:fd });
+  return await r.json();
+}
+function deltaCell(a, b, lowerIsBetter=true, fmt=(v)=>v){
+  if (a==null || b==null) return scoreChip('—','neutral');
+  const d = (b - a) * (lowerIsBetter ? 1 : -1);
+  const txt = (b===a) ? '0' : (d<0 ? `↓ ${fmt(Math.abs(d))}` : `↑ ${fmt(d)}`);
+  const cls = d<0 ? 'ok' : (d>0 ? 'bad' : 'neutral');
+  return scoreChip(txt, cls);
+}
+function eqChip(a, b){
+  const same = (a||'').trim() === (b||'').trim();
+  return scoreChip(same ? 'same' : 'diff', same ? 'ok' : 'warn');
+}
+function boolChip(v, okLabel='Yes', warnLabel='No'){ return scoreChip(v ? okLabel : warnLabel, v ? 'ok' : 'warn'); }
+function presentChip(v){ return scoreChip(v ? 'Present' : 'Missing', v ? 'ok':'warn'); }
+const hasNoindex = (s)=> (s||'').toLowerCase().includes('noindex') || (s||'').toLowerCase().includes('none');
+
+function renderCompare(nonamp, amp){
+  const a = nonamp, p = amp;
+  const rows = [];
+  const push = (label, A, B, D='—') => rows.push(`<tr><td>${label}</td><td>${A}</td><td>${B}</td><td>${typeof D==='string'?D:D}</td></tr>`);
+
+  /* --- Transport & Size --- */
+  push('HTTP Status',
+    scoreChip(num(a.http_status), a.http_status<400?'ok':'bad'),
+    scoreChip(num(p.http_status), p.http_status<400?'ok':'bad'),
+    scoreChip(p.http_status===a.http_status?'same':'—','neutral')
+  );
+  push('Protocol',
+    scoreChip(a.protocol||'—', gradeProtocol(a.protocol)),
+    scoreChip(p.protocol||'—', gradeProtocol(p.protocol)),
+    scoreChip('—','neutral')
+  );
+  push('HTTP Version',
+    scoreChip(a.http_version||'—','neutral'),
+    scoreChip(p.http_version||'—','neutral')
+  );
+  push('Page Size',
+    scoreChip(bytes(a.page_size_bytes), gradeSize(a.page_size_bytes)),
+    scoreChip(bytes(p.page_size_bytes), gradeSize(p.page_size_bytes)),
+    deltaCell(a.page_size_bytes, p.page_size_bytes, true, bytes)
+  );
+  push('Requests',
+    scoreChip(num(a.network?.requests), gradeRequests(a.network?.requests)),
+    scoreChip(num(p.network?.requests), gradeRequests(p.network?.requests)),
+    deltaCell(a.network?.requests, p.network?.requests, true, (v)=>v)
+  );
+  push('Transfer Bytes',
+    scoreChip(bytes(a.network?.transfer_bytes), gradeSize(a.network?.transfer_bytes)),
+    scoreChip(bytes(p.network?.transfer_bytes), gradeSize(p.network?.transfer_bytes)),
+    deltaCell(a.network?.transfer_bytes, p.network?.transfer_bytes, true, bytes)
+  );
+
+  /* --- Core Web Vitals / Performance --- */
+  push('FCP',
+    scoreChip(ms(a.speed?.fcp_ms), gradeFCP(a.speed?.fcp_ms)),
+    scoreChip(ms(p.speed?.fcp_ms), gradeFCP(p.speed?.fcp_ms)),
+    deltaCell(a.speed?.fcp_ms, p.speed?.fcp_ms, true, ms)
+  );
+  push('LCP',
+    scoreChip(ms(a.speed?.lcp_ms), gradeLCP(a.speed?.lcp_ms)),
+    scoreChip(ms(p.speed?.lcp_ms), gradeLCP(p.speed?.lcp_ms)),
+    deltaCell(a.speed?.lcp_ms, p.speed?.lcp_ms, true, ms)
+  );
+  push('CLS',
+    scoreChip(num(a.speed?.cls), gradeCLS(a.speed?.cls)),
+    scoreChip(num(p.speed?.cls), gradeCLS(p.speed?.cls)),
+    deltaCell(a.speed?.cls, p.speed?.cls, true, (v)=>v.toFixed ? v.toFixed(3) : v)
+  );
+  push('Input (FID/INP)',
+    scoreChip(ms(a.speed?.fid_ms), gradeFID(a.speed?.fid_ms)),
+    scoreChip(ms(p.speed?.fid_ms), gradeFID(p.speed?.fid_ms)),
+    deltaCell(a.speed?.fid_ms, p.speed?.fid_ms, true, ms)
+  );
+  push('Total Blocking (Long Tasks)',
+    scoreChip(ms(a.speed?.long_tasks_total_ms), gradeLong(a.speed?.long_tasks_total_ms)),
+    scoreChip(ms(p.speed?.long_tasks_total_ms), gradeLong(p.speed?.long_tasks_total_ms)),
+    deltaCell(a.speed?.long_tasks_total_ms, p.speed?.long_tasks_total_ms, true, ms)
+  );
+
+  /* --- Meta & Indexing --- */
+  const tA=a.title||'', tB=p.title||'';
+  const dA=a.meta?.description||'', dB=p.meta?.description||'';
+  push('Title Length',
+    scoreChip(`${tA.length||0} chars`, gradeTitleLen(tA.length||0)),
+    scoreChip(`${tB.length||0} chars`, gradeTitleLen(tB.length||0)),
+    scoreChip('—','neutral')
+  );
+  push('Meta Description Length',
+    scoreChip(`${dA.length||0} chars`, gradeDescLen(dA.length||0)),
+    scoreChip(`${dB.length||0} chars`, gradeDescLen(dB.length||0)),
+    scoreChip('—','neutral')
+  );
+  push('Canonical URL',
+    scoreChip(a.meta?.canonical || '—', a.meta?.canonical ? 'ok':'warn'),
+    scoreChip(p.meta?.canonical || '—', p.meta?.canonical ? 'ok':'warn'),
+    eqChip(a.meta?.canonical, p.meta?.canonical)
+  );
+  push('Canonical Valid',
+    scoreChip(String(a.advanced?.canonical_valid), gradeCanonicalValid(a.advanced?.canonical_valid)),
+    scoreChip(String(p.advanced?.canonical_valid), gradeCanonicalValid(p.advanced?.canonical_valid)),
+    scoreChip('—','neutral')
+  );
+  const rbA=a.meta?.robots||'', rbB=p.meta?.robots||'';
+  push('Meta Robots',
+    scoreChip(rbA || '—', rbA ? (hasNoindex(rbA)?'bad':'ok') : 'neutral'),
+    scoreChip(rbB || '—', rbB ? (hasNoindex(rbB)?'bad':'ok') : 'neutral'),
+    eqChip(rbA, rbB)
+  );
+  const xrA=a.indexing?.x_robots_tag||'', xrB=p.indexing?.x_robots_tag||'';
+  push('X-Robots-Tag (header)',
+    scoreChip(xrA || '—', xrA ? (hasNoindex(xrA)?'bad':'ok') : 'neutral'),
+    scoreChip(xrB || '—', xrB ? (hasNoindex(xrB)?'bad':'ok') : 'neutral'),
+    eqChip(xrA, xrB)
+  );
+  push('Viewport',
+    scoreChip(a.meta?.viewport || '—'),
+    scoreChip(p.meta?.viewport || '—'),
+    eqChip(a.meta?.viewport, p.meta?.viewport)
+  );
+  push('Favicon',
+    presentChip(a.meta?.favicon),
+    presentChip(p.meta?.favicon)
+  );
+
+  /* --- Social / Internationalization --- */
+  const ogA=(a.meta?.og_pairs||[]).length, ogB=(p.meta?.og_pairs||[]).length;
+  push('Open Graph Tags',
+    scoreChip(ogA, ogA>0?'ok':'warn'),
+    scoreChip(ogB, ogB>0?'ok':'warn'),
+    deltaCell(ogA, ogB, false, (v)=>v)
+  );
+  const twA=(a.meta?.twitter_pairs||[]).length, twB=(p.meta?.twitter_pairs||[]).length;
+  push('Twitter Tags',
+    scoreChip(twA, twA>0?'ok':'warn'),
+    scoreChip(twB, twB>0?'ok':'warn'),
+    deltaCell(twA, twB, false, (v)=>v)
+  );
+  const hlA=(a.meta?.hreflang||[]).length, hlB=(p.meta?.hreflang||[]).length;
+  push('Hreflang Count',
+    scoreChip(hlA, hlA>0?'ok':'neutral'),
+    scoreChip(hlB, hlB>0?'ok':'neutral'),
+    deltaCell(hlA, hlB, false, (v)=>v)
+  );
+
+  /* --- Content & Headings --- */
+  const wcA=a.content?.word_count, wcB=p.content?.word_count;
+  push('Word Count',
+    scoreChip(num(wcA)),
+    scoreChip(num(wcB)),
+    deltaCell(wcA, wcB, false, (v)=>v)
+  );
+  const H = (d, tag)=> (d.headings?.[tag]||[]).length;
+  push('H1 / H2 / H3',
+    scoreChip(`${H(a,'h1')}/${H(a,'h2')}/${H(a,'h3')}`, 'neutral'),
+    scoreChip(`${H(p,'h1')}/${H(p,'h2')}/${H(p,'h3')}`, 'neutral'),
+    scoreChip('—','neutral')
+  );
+
+  /* --- Links --- */
+  push('Internal Links',
+    scoreChip(num(a.links?.internal), 'neutral'),
+    scoreChip(num(p.links?.internal), 'neutral'),
+    deltaCell(a.links?.internal, p.links?.internal, false, (v)=>v)
+  );
+  push('External Links',
+    scoreChip(num(a.links?.external), 'neutral'),
+    scoreChip(num(p.links?.external), 'neutral'),
+    deltaCell(a.links?.external, p.links?.external, false, (v)=>v)
+  );
+  push('Nofollow Links',
+    scoreChip(num(a.links?.nofollow), 'neutral'),
+    scoreChip(num(p.links?.nofollow), 'neutral'),
+    deltaCell(a.links?.nofollow, p.links?.nofollow, true, (v)=>v)
+  );
+
+  /* --- Media (Images) --- */
+  const imgA=a.media?.images_count||0, imgB=p.media?.images_count||0;
+  const missAltA=a.media?.images_missing_alt||0, missAltB=p.media?.images_missing_alt||0;
+  const missDimA=a.media?.images_missing_dimensions||0, missDimB=p.media?.images_missing_dimensions||0;
+  const lazyA=a.media?.images_lazy_ratio, lazyB=p.media?.images_lazy_ratio;
+  push('Images',
+    scoreChip(imgA,'neutral'),
+    scoreChip(imgB,'neutral'),
+    deltaCell(imgA, imgB, true, (v)=>v)
+  );
+  push('Missing alt',
+    scoreChip(missAltA, gradeImageMissingRatio(missAltA, imgA)),
+    scoreChip(missAltB, gradeImageMissingRatio(missAltB, imgB)),
+    deltaCell(missAltA, missAltB, true, (v)=>v)
+  );
+  push('Missing dimensions',
+    scoreChip(missDimA, gradeImageMissingRatio(missDimA, imgA)),
+    scoreChip(missDimB, gradeImageMissingRatio(missDimB, imgB)),
+    deltaCell(missDimA, missDimB, true, (v)=>v)
+  );
+  push('Lazy-loading ratio',
+    scoreChip(lazyA!=null ? (Math.round(lazyA*1000)/10)+'%' : '—', lazyA!=null? (lazyA>=0.6?'ok':(lazyA>=0.3?'warn':'bad')):'neutral'),
+    scoreChip(lazyB!=null ? (Math.round(lazyB*1000)/10)+'%' : '—', lazyB!=null? (lazyB>=0.6?'ok':(lazyB>=0.3?'warn':'bad')):'neutral'),
+    deltaCell(lazyA, lazyB, false, (v)=> (Math.round(v*1000)/10)+'%')
+  );
+
+  /* --- Mixed Content --- */
+  const mcA=a.mixed_content?.insecure_count ?? 0, mcB=p.mixed_content?.insecure_count ?? 0;
+  push('Insecure refs (HTTP)',
+    scoreChip(mcA, gradeMixed(mcA)),
+    scoreChip(mcB, gradeMixed(mcB)),
+    deltaCell(mcA, mcB, true, (v)=>v)
+  );
+
+  /* --- Security Headers --- */
+  push('HSTS',
+    boolChip(a.security?.hsts, 'Yes','No'),
+    boolChip(p.security?.hsts, 'Yes','No'),
+    scoreChip('—','neutral')
+  );
+  push('Content-Security-Policy',
+    presentChip(a.security?.csp),
+    presentChip(p.security?.csp),
+    scoreChip('—','neutral')
+  );
+  push('X-Frame-Options',
+    scoreChip(a.security?.x_frame_options || '—', a.security?.x_frame_options ? 'ok':'warn'),
+    scoreChip(p.security?.x_frame_options || '—', p.security?.x_frame_options ? 'ok':'warn'),
+    eqChip(a.security?.x_frame_options || '', p.security?.x_frame_options || '')
+  );
+
+  /* --- Structured Data & PWA --- */
+  const schA=(a.schema_types||[]).length, schB=(p.schema_types||[]).length;
+  push('Structured Data Types',
+    scoreChip(schA, schA>0?'ok':'warn'),
+    scoreChip(schB, schB>0?'ok':'warn'),
+    deltaCell(schA, schB, false, (v)=>v)
+  );
+  push('Web App Manifest',
+    presentChip(a.pwa?.has_manifest),
+    presentChip(p.pwa?.has_manifest)
+  );
+  push('Service Worker',
+    boolChip(a.pwa?.service_worker),
+    boolChip(p.pwa?.service_worker)
+  );
+
+  const tbody = document.querySelector('#amp-tbl tbody');
+  tbody.innerHTML = rows.join('');
+  document.getElementById('amp-compare').style.display = 'block';
+}
+
+/* ---------- Render (fills UI + steps) ---------- */
+function render(d){
+  window.__lastScan = d;
+
+  $('kpi-wrap').style.display='grid';
+  $('act-wrap').style.display='flex';
+  $('open-page').href = d.final_url || d.input_url;
+
+  // KPIs
+  setScore('kpi-status', String(d.http_status ?? '—'), gradeStatus(d.http_status));
+  setScore('kpi-load',   (d.timing_ms!=null? (Math.round(d.timing_ms)+' ms'):'—'), gradeLCP(d.timing_ms));
+  setScore('kpi-size',   (d.page_size_bytes!=null? bytes(d.page_size_bytes):'—'), gradeSize(d.page_size_bytes));
+  setScore('kpi-proto',  d.protocol || '—', gradeProtocol(d.protocol));
+
+  // Speed
+  $('speed-card').style.display='block';
+  setScore('sp-fcp',  d.speed?.fcp_ms!=null? ms(d.speed.fcp_ms):'—',  gradeFCP(d.speed?.fcp_ms));
+  setScore('sp-lcp',  d.speed?.lcp_ms!=null? ms(d.speed.lcp_ms):'—',  gradeLCP(d.speed?.lcp_ms));
+  setScore('sp-cls',  d.speed?.cls!=null?  String(d.speed.cls):'—',   gradeCLS(d.speed?.cls));
+  setScore('sp-fid',  d.speed?.fid_ms!=null? ms(d.speed.fid_ms):'—',  gradeFID(d.speed?.fid_ms));
+  setScore('sp-long', d.speed?.long_tasks_total_ms!=null? ms(d.speed.long_tasks_total_ms):'—', gradeLong(d.speed?.long_tasks_total_ms));
+  stepDone('speed'); stepActive('network');
+
+  // Network
+  $('network-card').style.display='block';
+  setScore('nw-req',   String(d.network?.requests ?? '—'), gradeRequests(d.network?.requests));
+  setScore('nw-bytes', d.network?.transfer_bytes!=null? bytes(d.network.transfer_bytes):'—', gradeSize(d.network?.transfer_bytes));
+  const t1 = $('nw-type').querySelector('tbody'); t1.innerHTML='';
+  (d.network?.by_type ? Object.entries(d.network.by_type) : []).forEach(([k,v])=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${k}</td><td>${v.count}</td><td>${bytes(v.bytes)}</td>`;
+    t1.appendChild(tr);
+  });
+  const t2 = $('nw-big').querySelector('tbody'); t2.innerHTML='';
+  (d.network?.largest || []).forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td class="ellipsis" title="${r.name||''}">${r.name||''}</td><td>${r.type||''}</td><td>${bytes(r.bytes||0)}</td>`;
+    t2.appendChild(tr);
+  });
+  const t3 = $('nw-3p').querySelector('tbody'); t3.innerHTML='';
+  (d.network?.third_party || []).forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${r.domain}</td><td>${r.count}</td><td>${bytes(r.bytes)}</td>`;
+    t3.appendChild(tr);
+  });
+  stepDone('network'); stepActive('overview');
+
+  // Perf extras (best effort from network data)
+  const byType = d.network?.by_type || {};
+  const jsBytes = (byType.script && byType.script.bytes) ? byType.script.bytes : 0;
+  // CSS: initiatorType is usually "link" for stylesheets; fall back to summing .css in largest
+  let cssBytes = (byType.link && byType.link.bytes) ? byType.link.bytes : 0;
+  if(!cssBytes){
+    cssBytes = (d.network?.largest||[])
+      .filter(x => (x.name||'').toLowerCase().includes('.css'))
+      .reduce((a,x)=>a+(x.bytes||0),0);
+  }
+  setScore('px-js',  bytes(jsBytes), jsBytes < 350*1024 ? 'ok' : (jsBytes < 900*1024 ? 'warn' : 'bad'));
+  setScore('px-css', bytes(cssBytes), cssBytes < 150*1024 ? 'ok' : (cssBytes < 400*1024 ? 'warn' : 'bad'));
+  // rough unused %: heuristic only
+  const roughUnused = cssBytes ? (cssBytes > 350*1024 ? 0.6 : cssBytes > 150*1024 ? 0.4 : 0.2) : null;
+  setScore('px-unused', roughUnused==null ? '—' : pct(roughUnused), roughUnused==null ? 'neutral' : (roughUnused<=0.3 ? 'ok' : (roughUnused<=0.5 ? 'warn' : 'bad')));
+  const pb = $('px-block').querySelector('tbody'); pb.innerHTML = '';
+  // If future backend exposes extras.render_blocking, prefer it; otherwise derive from largest
+  const derivedBlocks = (d.network?.largest||[]).filter(x=>{
+    const n=(x.name||'').toLowerCase();
+    return n.endsWith('.css') || (n.endsWith('.js') && x.type==='script');
+  }).slice(0,10);
+  derivedBlocks.forEach(x=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML = `<td>${(x.name||'').toLowerCase().endsWith('.css')?'css':'script'}</td><td class="ellipsis" title="${x.name||''}">${x.name||''}</td>`;
+    pb.appendChild(tr);
+  });
+
+  // Overview
+  $('page-overview').style.display='block';
+  $('ov-url').textContent = d.input_url || '—';
+  $('ov-final').textContent = d.final_url || '—';
+  setScore('ov-https', (d.protocol==='HTTPS')?'HTTPS':'HTTP', gradeProtocol(d.protocol));
+  $('ov-httpver').textContent = d.http_version || '—';
+  $('ov-amp').textContent = d.meta?.amphtml ? d.meta.amphtml : '—';
+  $('amp-diff').disabled = !d.meta?.amphtml;
+  stepDone('overview'); stepActive('meta');
+
+  // SEO Meta
+  $('seo-meta').style.display='block';
+  const title = d.title || '';
+  const desc  = d.meta?.description || '';
+  const robots = (d.meta?.robots || '').toLowerCase();
+  setScore('m-title', title || '—', gradeTitleLen(title.length)); $('m-title-note').textContent = title? `(${title.length} chars)` : '';
+  setScore('m-desc',  desc || '—',  gradeDescLen(desc.length));   $('m-desc-note').textContent  = desc? `(${desc.length} chars)` : '';
+  setScore('m-canon', d.meta?.canonical || '—', gradeCanonicalValid(d.advanced?.canonical_valid));
+  let rGrade='neutral'; if(robots.includes('noindex') || robots.includes('none')) rGrade='bad'; else if (robots) rGrade='ok';
+  setScore('m-robots', d.meta?.robots || '—', rGrade);
+  $('m-viewport').textContent = d.meta?.viewport || '—';
+  $('m-favicon').textContent  = d.meta?.favicon || '—';
+  $('m-og').innerHTML='';     (d.meta?.og_pairs||[]).forEach(kv => $('m-og').appendChild(pill(kv)));
+  $('m-twitter').innerHTML=''; (d.meta?.twitter_pairs||[]).forEach(kv => $('m-twitter').appendChild(pill(kv)));
+  $('m-hreflang').innerHTML='';(d.meta?.hreflang||[]).forEach(h => $('m-hreflang').appendChild(pill(h.lang+': '+h.href)));
+  stepDone('meta'); stepActive('content');
+
+  // Content
+  $('content-structure').style.display='block';
+  const H=$('headings'); H.innerHTML='';
+  ['h1','h2','h3','h4','h5','h6'].forEach(tag=>{
+    const arr=(d.headings?.[tag]||[]); if(!arr.length) return;
+    const box=document.createElement('div'); box.className='kv';
+    const k=document.createElement('div'); k.className='k'; k.textContent=tag.toUpperCase();
+    const v=document.createElement('div'); v.innerHTML = arr.map(t=>`• ${t}`).join('<br>');
+    box.appendChild(k); box.appendChild(v); H.appendChild(box);
+  });
+  const tb=$('kw-table').querySelector('tbody'); tb.innerHTML='';
+  (d.keyword_density||[]).forEach(row=>{
+    const tr=document.createElement('tr'); tr.innerHTML=`<td>${row.word}</td><td>${row.count}</td><td>${(row.percent*100).toFixed(2)}%</td>`; tb.appendChild(tr);
+  });
+  setScore('ct-words', String(d.content?.word_count ?? '—'), (d.content?.word_count ? 'ok' : 'neutral'));
+  setScore('ct-read',  (d.content?.reading_time_min != null ? d.content.reading_time_min + ' min' : '—'), 'neutral');
+  stepDone('content'); stepActive('links');
+
+  // Links (counts)
+  setScore('ln-int', String(d.links?.internal ?? '—'), 'neutral');
+  setScore('ln-ext', String(d.links?.external ?? '—'), 'neutral');
+  setScore('ln-nf',  String(d.links?.nofollow ?? '—'), 'neutral');
+
+  // Update dropdown titles with counts
+  $('ln-int-count').textContent = `(${d.links?.internal ?? 0})`;
+  $('ln-ext-count').textContent = `(${d.links?.external ?? 0})`;
+  $('ln-nf-count').textContent  = `(${d.links?.nofollow ?? 0})`;
+
+  // Fill link tables (+ async status)
+  fillLinkTable('ln-int-table', d.links?.internal_list || []);
+  fillLinkTable('ln-ext-table', d.links?.external_list || []);
+  fillLinkTable('ln-nf-table',  d.links?.nofollow_list || []);
+
+  // “Showing N of M”
+  const meta = d.links?._meta || {};
+  $('ln-int-meta').textContent = `Showing ${(d.links?.internal_list?.length||0)} of ${meta.total_internal ?? (d.links?.internal ?? 0)}`;
+  $('ln-ext-meta').textContent = `Showing ${(d.links?.external_list?.length||0)} of ${meta.total_external ?? (d.links?.external ?? 0)}`;
+  $('ln-nf-meta').textContent  = `Showing ${(d.links?.nofollow_list?.length||0)} of ${meta.total_nofollow ?? (d.links?.nofollow ?? 0)}`;
+
+ 
+  stepDone('links'); stepActive('media');
+
+  // Media (images)
+  const imgCount = d.media?.images_count ?? 0;
+  const missAlt  = d.media?.images_missing_alt ?? 0;
+  const missDim  = d.media?.images_missing_dimensions ?? 0;
+  const lazyR    = d.media?.images_lazy_ratio;
+  setScore('img-total', String(imgCount), 'neutral');
+  setScore('img-miss',  String(missAlt),  gradeImageMissingRatio(missAlt, imgCount));
+  setScore('img-dims',  String(missDim),  gradeImageMissingRatio(missDim, imgCount));
+  setScore('img-lazy',  (lazyR!=null? pct(lazyR):'—'), gradeLazyRatio(lazyR));
+  const sample=$('img-sample'); sample.innerHTML='';
+  (d.media?.images_sample||[]).slice(0,6).forEach(im=>{
+    const div=document.createElement('div'); div.className='kv';
+    const k=document.createElement('div'); k.className='k'; k.textContent=(im.alt ? 'alt' : 'no alt');
+    const v=document.createElement('div'); v.textContent=im.src||'';
+    div.appendChild(k); div.appendChild(v); sample.appendChild(div);
+  });
+
+  // Heavy images (>100KB) via network largest
+  const ih=$('img-heavy').querySelector('tbody'); ih.innerHTML='';
+  (d.network?.largest||[])
+    .filter(x => (x.type==='img' || /\.(png|jpe?g|gif|webp|avif|svg)(\?|#|$)/i.test(x.name||'')) && (x.bytes||0) > 100*1024)
+    .slice(0,20)
+    .forEach(x=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td class="ellipsis" title="${x.name||''}">${x.name||''}</td><td>${bytes(x.bytes||0)}</td>`;
+      ih.appendChild(tr);
+    });
+  // Lazy candidates (shown only when we can infer later)
+  $('img-lazy-candidates').textContent = '';
+
+  stepDone('media'); stepActive('indexing');
+
+  // Indexing detail
+  $('ix-canon').textContent    = d.meta?.canonical || '—';
+  $('ix-robots').textContent   = d.meta?.robots   || '—';
+  $('ix-hreflang').textContent = (d.meta?.hreflang||[]).length;
+  stepDone('indexing'); stepActive('security');
+
+  // Security headers
+  $('idx-sec').style.display='grid';
+  setScore('ix-xrobots', d.indexing?.x_robots_tag || '—', (d.indexing?.x_robots_tag||'').toLowerCase().includes('noindex') ? 'bad' : (d.indexing?.x_robots_tag ? 'ok' : 'neutral'));
+  setScore('ix-canok',   String(d.advanced?.canonical_valid ?? '—'), gradeCanonicalValid(d.advanced?.canonical_valid));
+  setScore('ix-tlen',    String(d.advanced?.title_length ?? '—'),    gradeTitleLen(d.advanced?.title_length));
+  setScore('ix-dlen',    String(d.advanced?.meta_description_length ?? '—'), gradeDescLen(d.advanced?.meta_description_length));
+  setScore('sec-hsts',   d.security?.hsts ? 'Present' : 'Missing',   gradeHSTS(d.security?.hsts, d.protocol));
+  setScore('sec-csp',    d.security?.csp ? 'Present' : 'Missing',    gradeCSP(d.security?.csp));
+  setScore('sec-xfo',    d.security?.x_frame_options || '—',         d.security?.x_frame_options ? 'ok' : 'warn');
+  stepDone('security'); stepActive('mixed');
+
+  // Mixed content
+  setScore('mx-count', String(d.mixed_content?.insecure_count ?? 0), gradeMixed(d.mixed_content?.insecure_count));
+  const mx=$('mx-sample'); mx.innerHTML='';
+  (d.mixed_content?.sample||[]).forEach(u=>{
+    const div=document.createElement('div'); div.className='kv';
+    const k=document.createElement('div'); k.className='k'; k.textContent='http://';
+    const v=document.createElement('div'); v.textContent=u;
+    div.appendChild(k); div.appendChild(v); mx.appendChild(div);
+  });
+  stepDone('mixed'); stepActive('schema');
+
+  // Structured data
+  const sd=$('sd-types'); sd.innerHTML=''; (d.schema_types||[]).forEach(t => sd.appendChild(pill(t)));
+  stepDone('schema'); stepActive('finish');
+
+  // Raw + downloads
+  $('raw').textContent = JSON.stringify(d, null, 2);
+  $('download-json').onclick = () => {
+    const blob = new Blob([JSON.stringify(d,null,2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'scan.json'; a.click();
+  };
+  $('download-pdf').onclick = () => window.print();
+  $('export-csv').onclick = (e)=>{
+    e.preventDefault();
+    const rows=[{ input_url:d.input_url, final_url:d.final_url, status:d.http_status, protocol:d.protocol,
+      size_bytes:d.page_size_bytes, fcp_ms:d.speed?.fcp_ms, lcp_ms:d.speed?.lcp_ms, cls:d.speed?.cls, fid_ms:d.speed?.fid_ms,
+      reqs:d.network?.requests, transfer_bytes:d.network?.transfer_bytes, internal_links:d.links?.internal, external_links:d.links?.external,
+      nofollow_links:d.links?.nofollow, word_count:d.content?.word_count, reading_min:d.content?.reading_time_min,
+      images:d.media?.images_count, img_missing_alt:d.media?.images_missing_alt, mixed_insecure:d.mixed_content?.insecure_count,
+      xrobots:d.indexing?.x_robots_tag, canonical_valid:d.advanced?.canonical_valid }];
+    const blob = new Blob([toCSV(rows)], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download='scan.csv'; a.click();
+  };
+
+  // Finished
+  stepDone('finish');
+}
+
+/* ---------- Button hooks ---------- */
+document.getElementById('scan').onclick  = () =>
+  runScan({ rendered:true, waitMs:null });      // full scan
+
+document.getElementById('quick').onclick = () =>
+  runScan({ rendered:true, waitMs:7000 });      // quick scan ≈7s
+
+document.getElementById('amp-diff').onclick = async () => {
+  const base = window.__lastScan;
+  const ampUrl = base?.meta?.amphtml;
+  if (!ampUrl) return;
+  const amp = await scanRaw(ampUrl, 7000);
+  renderCompare(base, amp);
+};
+
+// CSV helper (kept at end so it's in scope for export)
+function toCSV(rows){
+  if(!rows || !rows.length) return '';
+  const cols = Object.keys(rows[0]);
+  const esc = (v)=>(''+(v??'')).replace(/"/g,'""');
+  const head = cols.map(c=>`"${esc(c)}"`).join(',');
+  const body = rows.map(r=>cols.map(c=>`"${esc(r[c])}"`).join(',')).join('\n');
+  return head+'\n'+body;
+}
+
+
+// ---- robots.txt render & UA tester ----
+(function(){
+  const $ = (id)=>document.getElementById(id);
+
+  function parseRobots(text){
+    const lines = (text||'').split(/\r?\n/);
+    const groups = [];
+    let currentUAs = [];
+    let currentRules = [];
+  function push(){
+  if (currentUAs.length || currentRules.length){
+    groups.push({ uas: [...currentUAs], rules: [...currentRules] });
+  }
+  currentUAs = []; currentRules = [];
+}
+
+    for(const raw of lines){
+      let line = raw.trim();
+      if(!line || line.startsWith('#')) continue;
+      const low = line.toLowerCase();
+      if(low.startsWith('user-agent:')){
+        const ua = line.split(':',2)[1].trim();
+        if(currentRules.length){ push(); }
+        currentUAs.push(ua||'*');
+      } else if(low.startsWith('allow:')){
+        currentRules.push({type:'allow', path: line.split(':',2)[1].trim()});
+      } else if(low.startsWith('disallow:')){
+        currentRules.push({type:'disallow', path: line.split(':',2)[1].trim()});
+      }
+    }
+    push();
+
+    const byUA = {};
+    for(const g of groups){
+      const allows = g.rules.filter(r=>r.type==='allow').map(r=>r.path);
+      const disallows = g.rules.filter(r=>r.type==='disallow').map(r=>r.path);
+      for(const ua of g.uas){
+        const key = (ua||'*').trim();
+        if(!byUA[key]) byUA[key] = {allows:[], disallows:[]};
+        byUA[key].allows.push(...allows);
+        byUA[key].disallows.push(...disallows);
+      }
+    }
+    return {byUA, groups};
+  }
+
+  function longestMatch(list, path){
+    let best='';
+    for(const r of (list||[])){ if(!r) continue; if(path.startsWith(r) && r.length>best.length) best=r; }
+    return best;
+  }
+
+  function decideAllow(allows, disallows, path){
+    const a = longestMatch(allows, path);
+    const d = longestMatch(disallows, path);
+    return !(d.length > a.length);
+  }
+
+  function fillTable(id, rows){
+    const tb = document.querySelector('#'+id+' tbody');
+    if(!tb) return;
+    tb.innerHTML = '';
+    (rows||[]).forEach(rule=>{
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.textContent = rule;
+      tr.appendChild(td);
+      tb.appendChild(tr);
+    });
+  }
+
+  function renderRobots(data){
+    const rb = (data.crawl && data.crawl.robots) ? data.crawl.robots : null;
+    if(!rb) return;
+
+    // Base info
+    if($('rb-url')) $('rb-url').textContent = rb.url || '—';
+    if($('rb-status')){
+      const st = rb.status;
+      $('rb-status').textContent = (st!=null ? String(st) : '—');
+      $('rb-status').className = 'score ' + ((st!=null && st<400)?'ok':(st!=null?'bad':'neutral'));
+    }
+    if($('rb-ua')) $('rb-ua').textContent = rb.ua || '*';
+
+    // Choose source of rules: prefer rb.text parsed per UA; fallback to lists from API
+    let parsed = rb.text ? parseRobots(rb.text) : null;
+
+    // Default path = analyzed page's path
+    let defPath = '/';
+    try {
+      const a = document.createElement('a'); a.href = data.final_url || data.input_url;
+      defPath = a.pathname || '/';
+    } catch(e){}
+
+    // Populate UI for default UA/path
+    function apply(ua, path){
+      let allows=[], disallows=[], can=null;
+
+      if(parsed){
+        // exact UA match (case-insensitive) else '*'
+        const key = Object.keys(parsed.byUA).find(k=>k.toLowerCase()===String(ua||'*').toLowerCase()) || '*';
+        const rules = parsed.byUA[key] || {allows:[], disallows:[]};
+        allows = rules.allows; disallows = rules.disallows;
+        can = decideAllow(allows, disallows, path);
+      }else{
+        allows = rb.allows || []; disallows = rb.disallows || [];
+        can = (typeof rb.can_fetch === 'boolean') ? rb.can_fetch : null;
+      }
+
+      fillTable('rb-allow-table', allows);
+      fillTable('rb-disallow-table', disallows);
+
+      if($('rb-can')){
+        $('rb-can').textContent = (can===true?'Allowed':(can===false?'Blocked':'—'));
+        $('rb-can').className = 'score ' + (can===true?'ok':(can===false?'bad':'neutral'));
+      }
+    }
+
+    // Set defaults in controls
+    const sel = $('rb-ua-select'), cst = $('rb-ua-custom'), ip = $('rb-path'), out = $('rb-test');
+    if(ip && !ip.value) ip.value = defPath;
+
+    function currentUA(){
+      const v = (cst && cst.value.trim()) ? cst.value.trim() : (sel ? sel.value : '*');
+      return v || '*';
+    }
+
+    function updateTest(){
+      const ua = currentUA();
+      const path = (ip && ip.value) ? ip.value : defPath;
+      let allows=[], disallows=[], can=null;
+      if(parsed){
+        const key = Object.keys(parsed.byUA).find(k=>k.toLowerCase()===ua.toLowerCase()) || '*';
+        const rules = parsed.byUA[key] || {allows:[], disallows:[]};
+        allows = rules.allows; disallows = rules.disallows;
+        can = decideAllow(allows, disallows, path);
+      }else{
+        allows = rb.allows || []; disallows = rb.disallows || [];
+        can = (typeof rb.can_fetch === 'boolean') ? rb.can_fetch : null;
+      }
+      if(out){
+        out.textContent = (can===true?'Allowed':(can===false?'Blocked':'—'));
+        out.className = 'score ' + (can===true?'ok':(can===false?'bad':'neutral'));
+      }
+      // Refresh lists too (so UA switch shows specific UA rules if text exists)
+      fillTable('rb-allow-table', allows);
+      fillTable('rb-disallow-table', disallows);
+    }
+
+    if(sel) sel.onchange = updateTest;
+    if(cst) cst.oninput = updateTest;
+    if(ip)  ip.oninput  = updateTest;
+
+    apply('*', defPath);
+    updateTest();
+    // Auto-open if any rules
+    try{
+      const any = (rb.allows && rb.allows.length) || (rb.disallows && rb.disallows.length) || (parsed && Object.keys(parsed.byUA).length);
+      if(any) document.getElementById('rb-acc')?.setAttribute('open','');
+    }catch(e){}
+  }
+
+const prev = window.render;
+window.render = function(data){
+  try { if (typeof prev === 'function') prev(data); } catch (e) {}
+  try { renderRobots(data); } catch (e) { console.warn('robots render failed', e); }
+  try { renderSitemaps(data); } catch (e) { console.warn('sitemaps render failed', e); }
+};
+
+
+/* --- Sitemaps (Indexing & Crawling) --- */
+/* --- Sitemaps (Indexing & Crawling) --- */
+function renderSitemaps(d){
+  const $ = (id)=>document.getElementById(id);
+  const sm = d?.crawl?.sitemaps || {};
+  const from = sm.from_robots || [];
+  const scanned = sm.scanned || [];
+
+  // Found in robots.txt (list)
+  const listEl = $('sm-list');
+  if (listEl){
+    listEl.innerHTML = from.length
+      ? from.map(u => `<div><a href="${u}" target="_blank" rel="noreferrer">${u}</a></div>`).join('')
+      : '—';
+  }
+
+  // URL scanned table
+  const table = document.getElementById('sm-scanned');
+  const tb = table ? table.querySelector('tbody') : null;
+  if (tb){
+    tb.innerHTML = scanned.map(r => `
+      <tr>
+        <td style="max-width:520px; word-break:break-all">
+          <a href="${r.url}" target="_blank" rel="noreferrer">${r.url || '—'}</a>
+        </td>
+        <td>${scoreChip(String(r.status ?? '—'), gradeStatus(r.status))}</td>
+        <td>${r.type || '—'}</td>
+        <td>${r.url_count != null ? r.url_count : '—'}</td>
+        <td>${r.contains_url
+              ? '<span class="score ok">Yes</span>'
+              : '<span class="score neutral">No</span>'}
+        </td>
+      </tr>
+    `).join('') || `<tr><td colspan="5" class="small" style="text-align:center">No sitemaps were scanned.</td></tr>`;
+  }
+
+  // Auto-open if there’s useful info
+  const smAcc = document.getElementById('sm-acc');
+  if (smAcc && (from.length || scanned.length)) smAcc.setAttribute('open','');
+}
+
+})();
+</script>
+</body>
+</html>
