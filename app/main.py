@@ -54,14 +54,17 @@ async def chrome_devtools_probe():
 async def fetch_pagespeed(url: str, strategy: str = "desktop") -> Dict[str, Any]:
     api_key = os.environ.get("PSI_API_KEY") or os.environ.get("PAGESPEED_API_KEY")
     if not api_key:
+        print(f"No PageSpeed API key found")
         return {}
+    
     endpoint = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     params = {"url": url, "strategy": strategy, "key": api_key, "category": "performance"}
     try:
         async with httpx.AsyncClient(timeout=30) as client:
             r = await client.get(endpoint, params=params)
             j = r.json()
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching PageSpeed data: {e}")
         return {}
 
     out: Dict[str, Any] = {}
@@ -73,24 +76,10 @@ async def fetch_pagespeed(url: str, strategy: str = "desktop") -> Dict[str, Any]
         out["cls"] = round(float(audits.get("cumulative-layout-shift", {}).get("numericValue") or 0), 3)
         out["fid_ms"] = round(audits.get("max-potential-fid", {}).get("numericValue") or 0)
         out["long_tasks_total_ms"] = round(audits.get("total-blocking-time", {}).get("numericValue") or 0)
-    except Exception:
-        pass
-
-    try:
-        m = (j.get("loadingExperience") or {}).get("metrics") or {}
-        if m:
-            out["fcp_ms"] = m.get("FIRST_CONTENTFUL_PAINT_MS", {}).get("percentile") or out.get("fcp_ms")
-            out["lcp_ms"] = m.get("LARGEST_CONTENTFUL_PAINT_MS", {}).get("percentile") or out.get("lcp_ms")
-            cls_p = m.get("CUMULATIVE_LAYOUT_SHIFT_SCORE", {}).get("percentile")
-            if cls_p is not None:
-                out["cls"] = round(float(cls_p) / 100.0, 3)
-            inp = m.get("INTERACTION_TO_NEXT_PAINT", {}).get("percentile")
-            if inp:
-                out["fid_ms"] = inp
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error parsing PageSpeed audit data: {e}")
+    
     return out
-
 
 # ---------- Basic HTTP helpers ----------
 async def _http_get(client: httpx.AsyncClient, url: str) -> Tuple[Optional[int], bytes, Dict[str, str]]:
@@ -632,16 +621,22 @@ async def analyze(
         if amp_href:
             from urllib.parse import urljoin as _urljoin
             amp_url = _urljoin(final_url, amp_href)
+             print(f"Fetching AMP page: {amp_url}")
 
             # Render the AMP page (mobile)
-            amp_res = await fetch_rendered(amp_url, mobile=True, max_wait_ms=max_wait_ms)
-            amp_html = amp_res.get("html") or ""
-            amp_final = amp_res.get("final_url", amp_url)
-            amp_extras = amp_res.get("extras", {}) or {}
+            amp_res = await fetch_rendered(amp_url, mobile=True, max_wait_ms=10000)
+        amp_html = amp_res.get("html") or ""
+        amp_final = amp_res.get("final_url", amp_url)
+        amp_extras = amp_res.get("extras", {}) or {}
 
             # Parse AMP SEO
-            amp_seo = parse_seo(amp_html, amp_final)
+           
+  amp_seo = parse_seo(amp_html, amp_final)
 
+        if not amp_seo:
+            print(f"Failed to parse AMP SEO data for {amp_url}")
+            amp_compare["has_amp"] = False
+        else:
             # Perf/metrics (best-effort)
             amp_paints = {p.get("name"): (p.get("startTime") or 0) for p in (amp_extras.get("paints") or [])}
             amp_metrics = (amp_extras.get("metrics") or {})
