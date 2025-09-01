@@ -616,15 +616,17 @@ async def analyze(
 
     # ------ AMP vs Non-AMP auto pre-scan (FULL SEO compare) ------
     amp_compare = {"has_amp": False}
-    try:
-        amp_href = ((seo.get("meta") or {}).get("amphtml") or None)
-        if amp_href:
-            from urllib.parse import urljoin as _urljoin
-            amp_url = _urljoin(final_url, amp_href)
-             print(f"Fetching AMP page: {amp_url}")
+   try:
+    amp_href = ((seo.get("meta") or {}).get("amphtml") or None)
+    if amp_href:
+        from urllib.parse import urljoin as _urljoin
+        amp_url = _urljoin(final_url, amp_href)
 
-            # Render the AMP page (mobile)
-            amp_res = await fetch_rendered(amp_url, mobile=True, max_wait_ms=10000)
+        # Correct indentation here
+        print(f"Fetching AMP page: {amp_url}")  # This should align with the level above
+
+        # Render the AMP page (mobile)
+        amp_res = await fetch_rendered(amp_url, mobile=True, max_wait_ms=max_wait_ms)
         amp_html = amp_res.get("html") or ""
         amp_final = amp_res.get("final_url", amp_url)
         amp_extras = amp_res.get("extras", {}) or {}
