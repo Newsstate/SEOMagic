@@ -1,4 +1,3 @@
-# app/browser_fetch.py
 from __future__ import annotations
 import asyncio, os, contextlib
 from typing import Optional, Dict, Any, Tuple
@@ -42,66 +41,37 @@ class PlaywrightPool:
             if self._pw:
                 with contextlib.suppress(Exception):
                     await self._pw.stop()
-            self._browser=None; self._pw=None; self._ready.clear()
+            self._browser = None
+            self._pw = None
+            self._ready.clear()
 
-    async def _new_page(self, mobile: bool=False) -> Tuple[BrowserContext, Page]:
+    async def _new_page(self, mobile: bool = False) -> Tuple[BrowserContext, Page]:
         await self._ready.wait()
         assert self._browser is not None
         context = await self._browser.new_context(
             user_agent=(
-              "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
+                "Mozilla/5.0 (Linux; Android 12; Pixel 6) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
             ) if mobile else (
-              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
             ),
-            viewport={"width":390,"height":844} if mobile else {"width":1366,"height":800},
+            viewport={"width": 390, "height": 844} if mobile else {"width": 1366, "height": 800},
             device_scale_factor=3 if mobile else 1,
             is_mobile=mobile,
             has_touch=mobile,
             java_script_enabled=True,
             ignore_https_errors=True,
         )
-        # Perf observers before navigation
-        await context.add_init_script("""
-        (() => {
-          window.__metrics = { lcp: 0, cls: 0, fid: null, longTasks: 0 };
-          try {
-            new PerformanceObserver(list => {
-              for (const e of list.getEntries()) {
-                const t = e.renderTime || e.loadTime || 0;
-                if (t > window.__metrics.lcp) window.__metrics.lcp = t;
-              }
-            }).observe({ type: 'largest-contentful-paint', buffered: true });
-          } catch (e) {}
 
-          try {
-            new PerformanceObserver(list => {
-              for (const e of list.getEntries()) {
-                if (!e.hadRecentInput && e.value) window.__metrics.cls += e.value;
-              }
-            }).observe({ type: 'layout-shift', buffered: true });
-          } catch (e) {}
-
-          try {
-            new PerformanceObserver(list => {
-              const e = list.getEntries()[0];
-              if (e) window.__metrics.fid = e.processingStart - e.startTime;
-            }).observe({ type: 'first-input', buffered: true });
-          } catch (e) {}
-
-          try {
-            new PerformanceObserver(list => {
-              for (const e of list.getEntries()) window.__metrics.longTasks += e.duration;
-            }).observe({ type: 'longtask', buffered: true });
-          } catch (e) {}
-        })();
-        """)
+        # Block unnecessary resources like images and stylesheets
         page = await context.new_page()
         page.set_default_timeout(PAGE_TIMEOUT_MS)
+        page.on("route", lambda route: route.continue_() if route.request.resource_type not in ['image', 'stylesheet'] else route.abort())
+        
         return context, page
 
-    async def fetch(self, url: str, *, mobile: bool=False, max_wait_ms: Optional[int]=None) -> Dict[str, Any]:
+    async def fetch(self, url: str, *, mobile: bool = False, max_wait_ms: Optional[int] = None) -> Dict[str, Any]:
         timeout = max_wait_ms or PAGE_TIMEOUT_MS
         await self._sema.acquire()
         try:
@@ -110,7 +80,7 @@ class PlaywrightPool:
                 resp = await page.goto(url, wait_until="domcontentloaded", timeout=timeout)
                 # Extra settle time for SPA/lazy content
                 with contextlib.suppress(Exception):
-                    await page.wait_for_load_state("networkidle", timeout=int(timeout*0.6))
+                    await page.wait_for_load_state("networkidle", timeout=int(timeout * 0.6))
 
                 if ENABLE_SCREENSHOTS:
                     with contextlib.suppress(Exception):
@@ -119,11 +89,11 @@ class PlaywrightPool:
                 # Collect perf, network, PWA, images, and render-blocking info
                 extras = await page.evaluate("""
                 () => {
-                  const paints = performance.getEntriesByType('paint').map(e => ({name: e.name, startTime: e.startTime||0}));
+                  const paints = performance.getEntriesByType('paint').map(e => ({name: e.name, startTime: e.startTime || 0}));
                   const resources = performance.getEntriesByType('resource').map(e => ({
-                    name: e.name, initiatorType: e.initiatorType||'',
-                    transferSize: e.transferSize||0, encodedBodySize: e.encodedBodySize||0,
-                    decodedBodySize: e.decodedBodySize||0, startTime: e.startTime||0, duration: e.duration||0,
+                    name: e.name, initiatorType: e.initiatorType || '',
+                    transferSize: e.transferSize || 0, encodedBodySize: e.encodedBodySize || 0,
+                    decodedBodySize: e.decodedBodySize || 0, startTime: e.startTime || 0, duration: e.duration || 0,
                   }));
                   const nav = (performance.getEntriesByType('navigation')[0]) || {};
                   const metrics = (window.__metrics || {});
@@ -133,7 +103,7 @@ class PlaywrightPool:
                   const manifest = manifestEl ? manifestEl.href : null;
                   let sw = false;
                   if ('serviceWorker' in navigator) {
-                    try { sw = !!navigator.serviceWorker.controller || false; } catch(e) {}
+                    try { sw = !!navigator.serviceWorker.controller || false; } catch (e) {}
                   }
 
                   // Media audit source: images present in DOM
@@ -169,7 +139,7 @@ class PlaywrightPool:
                       defer: !!s.defer,
                       type: s.type || null,
                       in_head: !!s.closest('head'),
-                      is_blocking: (!!s.closest('head') && !s.async && !s.defer && !(s.type||'').includes('module'))
+                      is_blocking: (!!s.closest('head') && !s.async && !s.defer && !(s.type || '').includes('module'))
                     }))
                   };
 
@@ -192,8 +162,10 @@ class PlaywrightPool:
                     "extras": extras,
                 }
             finally:
-                with contextlib.suppress(Exception): await page.close()
-                with contextlib.suppress(Exception): await context.close()
+                with contextlib.suppress(Exception):
+                    await page.close()
+                with contextlib.suppress(Exception):
+                    await context.close()
         finally:
             self._sema.release()
 
@@ -206,7 +178,7 @@ async def get_pool() -> PlaywrightPool:
         await _pool.start()
     return _pool
 
-async def fetch_rendered(url: str, *, mobile: bool=False, max_wait_ms: Optional[int]=None) -> Dict[str, Any]:
+async def fetch_rendered(url: str, *, mobile: bool = False, max_wait_ms: Optional[int] = None) -> Dict[str, Any]:
     pool = await get_pool()
     return await pool.fetch(url, mobile=mobile, max_wait_ms=max_wait_ms)
 
